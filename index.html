@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>🧯 Fire Extinguisher AR Tutorial</title>
+
+  <!-- A-Frame & AR.js -->
+  <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/ar.js@2.3.4/aframe/build/aframe-ar.min.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #111;
+      overflow: hidden;
+    }
+
+    /* ── Landing screen ── */
+    #landing {
+      position: fixed; inset: 0; z-index: 1000;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px; text-align: center; color: white;
+    }
+    #landing h1 { font-size: 2rem; margin-bottom: 8px; }
+    #landing h1 span { color: #e74c3c; }
+    #landing p  { color: #aaa; font-size: 0.95rem; margin-bottom: 28px; line-height: 1.6; }
+
+    .step-pills {
+      display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; justify-content: center;
+    }
+    .pill {
+      background: rgba(231,76,60,0.15); border: 1px solid rgba(231,76,60,0.4);
+      border-radius: 999px; padding: 6px 16px; font-size: 0.85rem; color: #e74c3c;
+    }
+
+    .info-box {
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px; padding: 18px 22px; margin-bottom: 28px;
+      font-size: 0.88rem; color: #ccc; text-align: left; line-height: 1.7;
+      max-width: 340px; width: 100%;
+    }
+    .info-box strong { color: white; }
+
+    #start-btn {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white; border: none; border-radius: 50px;
+      padding: 16px 40px; font-size: 1.1rem; font-weight: 700;
+      cursor: pointer; box-shadow: 0 4px 20px rgba(231,76,60,0.4);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #start-btn:active { transform: scale(0.97); }
+
+    /* ── HUD overlay ── */
+    #hud { display: none; }
+    #hud.visible { display: block; }
+
+    #step-card {
+      position: fixed; top: 16px; left: 50%; transform: translateX(-50%);
+      z-index: 500; width: calc(100% - 32px); max-width: 380px;
+      background: rgba(10,10,20,0.88); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+      padding: 14px 18px; color: white;
+    }
+    #step-badge {
+      display: inline-block; background: #e74c3c; color: white;
+      border-radius: 999px; font-size: 0.7rem; font-weight: 700;
+      padding: 2px 10px; margin-bottom: 6px; letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    #step-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 3px; }
+    #step-desc  { font-size: 0.82rem; color: #bbb; line-height: 1.5; }
+
+    /* Progress dots */
+    #progress {
+      position: fixed; top: 130px; left: 50%; transform: translateX(-50%);
+      z-index: 500; display: flex; gap: 8px;
+    }
+    .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255,255,255,0.2); transition: background 0.3s, transform 0.3s;
+    }
+    .dot.active { background: #e74c3c; transform: scale(1.3); }
+    .dot.done   { background: rgba(231,76,60,0.5); }
+
+    /* Marker hint */
+    #marker-hint {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      z-index: 500; text-align: center; color: rgba(255,255,255,0.7);
+      font-size: 0.8rem; animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:0.5} 50%{opacity:1} }
+
+    /* Nav buttons */
+    #nav-bar {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      z-index: 500; display: flex; gap: 12px; align-items: center;
+    }
+    .nav-btn {
+      background: rgba(10,10,20,0.88); backdrop-filter: blur(10px);
+      border: 1px solid rgba(255,255,255,0.15); color: white;
+      border-radius: 50px; padding: 12px 22px;
+      font-size: 0.9rem; font-weight: 600; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+    #next-btn {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      border-color: transparent;
+      box-shadow: 0 4px 16px rgba(231,76,60,0.35);
+    }
+    #next-btn:disabled { background: rgba(10,10,20,0.88); box-shadow: none; border-color: rgba(255,255,255,0.15); }
+
+    /* Completed screen */
+    #complete-card {
+      position: fixed; inset: 0; z-index: 600;
+      background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);
+      display: none; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: white; text-align: center; padding: 32px;
+    }
+    #complete-card.visible { display: flex; }
+    #complete-card h2 { font-size: 2rem; margin-bottom: 12px; }
+    #complete-card p  { color: #aaa; margin-bottom: 28px; line-height: 1.6; }
+    #restart-btn {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white; border: none; border-radius: 50px;
+      padding: 14px 36px; font-size: 1rem; font-weight: 700; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     LANDING SCREEN
+══════════════════════════════════════════ -->
+<div id="landing">
+  <div style="font-size:3.5rem;margin-bottom:12px">🧯</div>
+  <h1>Fire Extinguisher<br><span>AR Tutorial</span></h1>
+  <p>Learn the P·A·S·S technique in<br>Augmented Reality — right in your world.</p>
+
+  <div class="step-pills">
+    <span class="pill">P — Pull</span>
+    <span class="pill">A — Aim</span>
+    <span class="pill">S — Squeeze</span>
+    <span class="pill">S — Sweep</span>
+  </div>
+
+  <div class="info-box">
+    <strong>Before you start:</strong><br>
+    1. Print or display the <a href="marker.html" style="color:#e74c3c">Hiro marker</a> on any surface.<br>
+    2. Tap <em>Start AR</em> and allow camera access.<br>
+    3. Point your camera at the marker — the 3D extinguisher will appear!<br>
+    4. Use <strong>Next / Prev</strong> to walk through each step.
+  </div>
+
+  <button id="start-btn" onclick="startAR()">▶ Start AR Tutorial</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     AR HUD
+══════════════════════════════════════════ -->
+<div id="hud">
+  <div id="step-card">
+    <div id="step-badge">Step 0 / 4</div>
+    <div id="step-title">Point camera at the Hiro marker</div>
+    <div id="step-desc">The 3D fire extinguisher will appear above the marker.</div>
+  </div>
+
+  <div id="progress"></div>
+
+  <div id="marker-hint">📄 Point camera at the printed Hiro marker</div>
+
+  <div id="nav-bar">
+    <button class="nav-btn" id="prev-btn" onclick="changeStep(-1)" disabled>◀ Prev</button>
+    <button class="nav-btn" id="next-btn" onclick="changeStep(1)">Next ▶</button>
+  </div>
+</div>
+
+<!-- Completion screen -->
+<div id="complete-card">
+  <div style="font-size:4rem;margin-bottom:16px">✅</div>
+  <h2>You've Got It!</h2>
+  <p>You now know the <strong>P·A·S·S</strong> technique.<br>
+     In a real emergency, remember:<br>
+     <em>Pull · Aim · Squeeze · Sweep</em></p>
+  <button id="restart-btn" onclick="restartTutorial()">🔄 Restart Tutorial</button>
+</div>
+
+<!-- ══════════════════════════════════════════
+     A-FRAME SCENE
+══════════════════════════════════════════ -->
+<a-scene id="ar-scene" style="display:none"
+  embedded
+  arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3;"
+  vr-mode-ui="enabled: false"
+  renderer="logarithmicDepthBuffer: true; antialias: true;"
+  loading-screen="enabled: false">
+
+  <a-assets>
+    <!-- Pre-defined animation speeds for reuse -->
+  </a-assets>
+
+  <a-marker preset="hiro" id="main-marker">
+
+    <!-- ─── FIRE EXTINGUISHER MODEL ─── -->
+    <a-entity id="extinguisher" position="0 0 0">
+
+      <!-- Base plate -->
+      <a-cylinder color="#888" radius="0.22" height="0.05" position="0 0.025 0"
+        shadow="receive: true"></a-cylinder>
+
+      <!-- Body (main red cylinder) -->
+      <a-cylinder id="body" color="#e74c3c" radius="0.16" height="1.1" position="0 0.62 0"
+        shadow="cast: true; receive: true"></a-cylinder>
+
+      <!-- Body highlight stripe -->
+      <a-cylinder color="#c0392b" radius="0.161" height="0.12" position="0 0.45 0"></a-cylinder>
+
+      <!-- Label area (white band) -->
+      <a-cylinder color="#f5f5f5" radius="0.162" height="0.28" position="0 0.72 0"
+        opacity="0.9"></a-cylinder>
+
+      <!-- Shoulder taper -->
+      <a-cone color="#c0392b" radius-bottom="0.16" radius-top="0.10" height="0.22"
+        position="0 1.23 0" shadow="cast: true"></a-cone>
+
+      <!-- Neck -->
+      <a-cylinder color="#888" radius="0.08" height="0.12" position="0 1.40 0"></a-cylinder>
+
+      <!-- Valve head -->
+      <a-cylinder color="#555" radius="0.11" height="0.08" position="0 1.50 0"></a-cylinder>
+
+      <!-- Gauge -->
+      <a-sphere color="#eee" radius="0.05" position="0.13 1.02 0.1"></a-sphere>
+      <a-sphere color="#e74c3c" radius="0.025" position="0.15 1.02 0.11"
+        id="gauge-needle"></a-sphere>
+
+      <!-- Safety PIN (yellow ring + rod) — pulled in step 1 -->
+      <a-entity id="pin-group" position="0 1.50 0">
+        <a-torus color="#f1c40f" radius="0.07" tube="0.012" rotation="90 0 0"
+          position="0.18 0 0"></a-torus>
+        <a-cylinder color="#f1c40f" radius="0.01" height="0.22"
+          position="0.10 0 0" rotation="0 0 90"></a-cylinder>
+      </a-entity>
+
+      <!-- Handle bar -->
+      <a-box color="#2c3e50" width="0.38" height="0.06" depth="0.07"
+        position="0 1.57 0"></a-box>
+
+      <!-- Trigger lever -->
+      <a-entity id="trigger-lever" position="0 1.50 0">
+        <a-box color="#34495e" width="0.06" height="0.22" depth="0.06"
+          position="0 -0.08 0"></a-box>
+      </a-entity>
+
+      <!-- Hose connection -->
+      <a-cylinder color="#2c3e50" radius="0.025" height="0.18"
+        position="0.16 1.56 0" rotation="0 0 -40"></a-cylinder>
+
+      <!-- Hose (curved segment) -->
+      <a-entity id="hose-group" position="0.28 1.52 0" rotation="0 0 0">
+        <a-cylinder color="#1a1a1a" radius="0.022" height="0.35"
+          rotation="0 0 20" position="0.06 -0.1 0"></a-cylinder>
+      </a-entity>
+
+      <!-- Nozzle -->
+      <a-entity id="nozzle-group" position="0.36 1.38 0" rotation="0 0 0">
+        <a-cone color="#1a1a1a" radius-bottom="0.04" radius-top="0.02" height="0.18"
+          rotation="0 0 -75"></a-cone>
+      </a-entity>
+
+    </a-entity>
+    <!-- ─── END EXTINGUISHER ─── -->
+
+    <!-- ─── STEP ANIMATIONS / FX ─── -->
+
+    <!-- Step 1: PIN pull arrow -->
+    <a-entity id="fx-pin" visible="false">
+      <!-- Animated arrow pointing at pin -->
+      <a-cone color="#f1c40f" radius-bottom="0.06" radius-top="0" height="0.12"
+        position="0.45 1.50 0" rotation="0 0 90"
+        animation="property:position; to:0.55 1.50 0; loop:true; dir:alternate; dur:600; easing:easeInOutSine">
+      </a-cone>
+      <a-text value="PULL the Pin!" position="0 2.0 0" align="center"
+        color="#f1c40f" scale="0.6 0.6 0.6"
+        animation="property:position; to:0 2.05 0; loop:true; dir:alternate; dur:1200">
+      </a-text>
+    </a-entity>
+
+    <!-- Step 2: Fire at base + aim arrow -->
+    <a-entity id="fx-fire" visible="false" position="0.6 0 0">
+      <!-- Fire flames -->
+      <a-cone id="flame1" color="#e74c3c" radius-bottom="0.12" radius-top="0.01" height="0.4"
+        position="0 0.2 0"
+        animation="property:scale; to:0.9 1.1 0.9; loop:true; dir:alternate; dur:300">
+      </a-cone>
+      <a-cone id="flame2" color="#e67e22" radius-bottom="0.09" radius-top="0.01" height="0.3"
+        position="0.05 0.15 0.05"
+        animation="property:scale; to:1.1 0.9 1.1; loop:true; dir:alternate; dur:250; delay:100">
+      </a-cone>
+      <a-cone id="flame3" color="#f39c12" radius-bottom="0.06" radius-top="0.01" height="0.22"
+        position="-0.04 0.12 -0.03"
+        animation="property:scale; to:0.8 1.15 0.8; loop:true; dir:alternate; dur:400; delay:50">
+      </a-cone>
+      <a-text value="AIM at base of fire!" position="-0.6 0.7 0" align="center"
+        color="#e74c3c" scale="0.5 0.5 0.5"></a-text>
+    </a-entity>
+
+    <!-- Step 3: Spray cloud + squeeze indicator -->
+    <a-entity id="fx-spray" visible="false">
+      <!-- Spray particles -->
+      <a-sphere color="#a8d8ea" radius="0.05" opacity="0.7" position="0.45 1.40 0"
+        animation="property:position; to:0.85 1.20 0; loop:true; dur:800; easing:easeInQuad">
+      </a-sphere>
+      <a-sphere color="#a8d8ea" radius="0.04" opacity="0.5" position="0.45 1.42 0.05"
+        animation="property:position; to:0.90 1.15 0.08; loop:true; dur:700; delay:150; easing:easeInQuad">
+      </a-sphere>
+      <a-sphere color="#a8d8ea" radius="0.04" opacity="0.5" position="0.46 1.38 -0.04"
+        animation="property:position; to:0.88 1.18 -0.06; loop:true; dur:900; delay:300; easing:easeInQuad">
+      </a-sphere>
+      <a-sphere color="#a8d8ea" radius="0.06" opacity="0.4" position="0.50 1.35 0"
+        animation="property:position; to:0.95 1.10 0; loop:true; dur:1000; delay:80; easing:easeInQuad">
+      </a-sphere>
+      <a-text value="SQUEEZE the handle!" position="0 2.0 0" align="center"
+        color="#3498db" scale="0.6 0.6 0.6"></a-text>
+    </a-entity>
+
+    <!-- Step 4: Sweep arc + shrinking fire -->
+    <a-entity id="fx-sweep" visible="false">
+      <!-- Sweep indicator arc -->
+      <a-torus color="#3498db" radius="0.55" tube="0.015" rotation="90 0 0"
+        arc="180" position="0 0.05 0" opacity="0.6"
+        animation="property:rotation; to:95 0 0; loop:true; dir:alternate; dur:1500">
+      </a-torus>
+
+      <!-- Spray that sweeps -->
+      <a-entity id="sweep-spray"
+        animation="property:rotation; from: 0 -45 0; to: 0 45 0; loop:true; dir:alternate; dur:1200; easing:easeInOutSine">
+        <a-sphere color="#a8d8ea" radius="0.04" opacity="0.6" position="0.5 1.40 0"
+          animation="property:position; to:0.9 1.10 0; loop:true; dur:700">
+        </a-sphere>
+        <a-sphere color="#a8d8ea" radius="0.03" opacity="0.4" position="0.52 1.38 0"
+          animation="property:position; to:0.95 1.05 0; loop:true; dur:600; delay:200">
+        </a-sphere>
+      </a-entity>
+
+      <!-- Dying fire -->
+      <a-entity position="0.6 0 0">
+        <a-cone color="#e74c3c" radius-bottom="0.08" radius-top="0.01" height="0.25"
+          position="0 0.12 0"
+          animation="property:scale; to:0.2 0.2 0.2; dur:4000; easing:easeInQuad">
+        </a-cone>
+      </a-entity>
+
+      <a-text value="SWEEP side to side!" position="0 2.0 0" align="center"
+        color="#2ecc71" scale="0.6 0.6 0.6"></a-text>
+    </a-entity>
+
+  </a-marker>
+
+  <a-entity camera></a-entity>
+</a-scene>
+
+<!-- ══════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════ -->
+<script>
+  /* ── Step definitions ── */
+  const STEPS = [
+    {
+      badge: "Welcome",
+      title: "Point camera at the Hiro marker",
+      desc:  "Hold your phone steady over the printed marker. The 3D fire extinguisher will appear.",
+      fx:    []
+    },
+    {
+      badge: "P — Step 1 / 4",
+      title: "PULL the Pin",
+      desc:  "Locate the safety pin at the top of the handle. Pull it out to unlock the extinguisher.",
+      fx:    ["fx-pin"],
+      anim:  () => {
+        // Pin flies out to the right
+        document.getElementById('pin-group').setAttribute('animation',
+          'property:position; to:0.6 1.50 0; dur:1200; easing:easeOutBounce');
+      },
+      reset: () => {
+        document.getElementById('pin-group').removeAttribute('animation');
+        document.getElementById('pin-group').setAttribute('position','0 1.50 0');
+      }
+    },
+    {
+      badge: "A — Step 2 / 4",
+      title: "AIM at the Base of the Fire",
+      desc:  "Point the nozzle at the BASE of the flames — not the tips. This cuts off the fuel source.",
+      fx:    ["fx-fire"],
+      anim:  () => {
+        // Tilt hose toward fire
+        document.getElementById('hose-group').setAttribute('animation',
+          'property:rotation; to:0 0 30; dur:800; easing:easeOutSine');
+      },
+      reset: () => {
+        document.getElementById('hose-group').removeAttribute('animation');
+        document.getElementById('hose-group').setAttribute('rotation','0 0 0');
+      }
+    },
+    {
+      badge: "S — Step 3 / 4",
+      title: "SQUEEZE the Handle",
+      desc:  "Firmly squeeze the lever to release the extinguishing agent. Keep steady pressure.",
+      fx:    ["fx-spray"],
+      anim:  () => {
+        document.getElementById('trigger-lever').setAttribute('animation',
+          'property:position; from:0 1.50 0; to:0 1.44 0; loop:true; dir:alternate; dur:400; easing:easeInOutSine');
+      },
+      reset: () => {
+        document.getElementById('trigger-lever').removeAttribute('animation');
+        document.getElementById('trigger-lever').setAttribute('position','0 1.50 0');
+      }
+    },
+    {
+      badge: "S — Step 4 / 4",
+      title: "SWEEP Side to Side",
+      desc:  "Move the nozzle slowly from side to side at the base of the fire until it is fully out.",
+      fx:    ["fx-sweep"],
+      anim:  () => {
+        document.getElementById('nozzle-group').setAttribute('animation',
+          'property:rotation; from:0 -40 0; to:0 40 0; loop:true; dir:alternate; dur:1200; easing:easeInOutSine');
+      },
+      reset: () => {
+        document.getElementById('nozzle-group').removeAttribute('animation');
+        document.getElementById('nozzle-group').setAttribute('rotation','0 0 0');
+      }
+    }
+  ];
+
+  const ALL_FX = ["fx-pin","fx-fire","fx-spray","fx-sweep"];
+  let currentStep = 0;
+  let arStarted = false;
+
+  /* ── Build progress dots ── */
+  function buildDots() {
+    const prog = document.getElementById('progress');
+    prog.innerHTML = '';
+    for (let i = 0; i < STEPS.length; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === 0 ? ' active' : '');
+      d.id = 'dot-' + i;
+      prog.appendChild(d);
+    }
+  }
+
+  /* ── Update HUD ── */
+  function updateHUD() {
+    const s = STEPS[currentStep];
+    document.getElementById('step-badge').textContent = s.badge;
+    document.getElementById('step-title').textContent = s.title;
+    document.getElementById('step-desc').textContent  = s.desc;
+
+    document.getElementById('prev-btn').disabled = (currentStep === 0);
+    document.getElementById('next-btn').disabled = (currentStep === STEPS.length - 1);
+    document.getElementById('next-btn').textContent = 
+      currentStep === STEPS.length - 1 ? '✅ Finish' : 'Next ▶';
+
+    // Progress dots
+    for (let i = 0; i < STEPS.length; i++) {
+      const d = document.getElementById('dot-' + i);
+      d.className = 'dot' +
+        (i === currentStep ? ' active' : i < currentStep ? ' done' : '');
+    }
+  }
+
+  /* ── Apply step FX ── */
+  function applyFX(step) {
+    // Hide all FX
+    ALL_FX.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.setAttribute('visible', false);
+    });
+
+    // Reset previous step anims
+    STEPS.forEach(s => { if (s.reset) s.reset(); });
+
+    // Show this step's FX
+    if (step.fx) {
+      step.fx.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.setAttribute('visible', true);
+      });
+    }
+    if (step.anim) step.anim();
+  }
+
+  /* ── Navigation ── */
+  function changeStep(delta) {
+    const newStep = currentStep + delta;
+    if (newStep < 0 || newStep >= STEPS.length) return;
+    currentStep = newStep;
+    applyFX(STEPS[currentStep]);
+    updateHUD();
+
+    // Show completion screen after last step next press
+    if (currentStep === STEPS.length - 1 && delta === 1) {
+      setTimeout(() => {
+        document.getElementById('complete-card').classList.add('visible');
+      }, 1800);
+    }
+  }
+
+  function restartTutorial() {
+    currentStep = 0;
+    document.getElementById('complete-card').classList.remove('visible');
+    applyFX(STEPS[0]);
+    updateHUD();
+  }
+
+  /* ── Start AR ── */
+  function startAR() {
+    document.getElementById('landing').style.display = 'none';
+    document.getElementById('ar-scene').style.display = 'block';
+    document.getElementById('hud').classList.add('visible');
+    if (!arStarted) {
+      buildDots();
+      arStarted = true;
+    }
+    applyFX(STEPS[0]);
+    updateHUD();
+  }
+
+  /* ── Marker found / lost feedback ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    const hint = document.getElementById('marker-hint');
+    document.querySelector('#main-marker').addEventListener('markerFound', () => {
+      hint.style.opacity = '0';
+    });
+    document.querySelector('#main-marker').addEventListener('markerLost', () => {
+      hint.style.opacity = '1';
+    });
+  });
+</script>
+</body>
+</html>

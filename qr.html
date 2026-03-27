@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🔲 Your AR QR Code – Fire Extinguisher Tutorial</title>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      min-height: 100vh; color: white;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 24px;
+    }
+
+    h1 { font-size: 1.5rem; margin-bottom: 6px; text-align: center; }
+    .sub { color: #aaa; font-size: 0.88rem; text-align: center; margin-bottom: 28px; }
+
+    .card {
+      background: rgba(255,255,255,0.06); backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 28px 24px;
+      max-width: 360px; width: 100%; text-align: center;
+    }
+
+    #qr-canvas {
+      border-radius: 12px; margin: 0 auto 16px;
+      display: block;
+    }
+
+    .url-box {
+      background: rgba(255,255,255,0.08); border-radius: 10px;
+      padding: 10px 14px; font-size: 0.8rem; color: #aaa;
+      word-break: break-all; margin-bottom: 20px; text-align: left;
+    }
+
+    label { display: block; text-align: left; font-size: 0.82rem; color: #aaa; margin-bottom: 6px; }
+    input[type=text] {
+      width: 100%; background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
+      color: white; padding: 10px 14px; font-size: 0.9rem;
+      margin-bottom: 12px; outline: none;
+    }
+    input[type=text]:focus { border-color: #e74c3c; }
+
+    .btn {
+      width: 100%; border: none; border-radius: 12px;
+      padding: 13px; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; margin-bottom: 10px;
+    }
+    .btn-red {
+      background: linear-gradient(135deg, #e74c3c, #c0392b);
+      color: white;
+    }
+    .btn-dark {
+      background: rgba(255,255,255,0.08);
+      color: white; border: 1px solid rgba(255,255,255,0.15);
+    }
+
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 16px 0; }
+
+    .hint { font-size: 0.78rem; color: #888; line-height: 1.6; }
+    .hint strong { color: #e74c3c; }
+
+    @media print {
+      body { background: white; color: black; min-height: auto; }
+      .card { border: 2px solid #eee; background: white; }
+      input, .btn, h1, .sub, .divider, .hint { display: none; }
+      .url-box { color: #555; background: #f9f9f9; }
+    }
+  </style>
+</head>
+<body>
+  <h1>🔲 Your AR QR Code</h1>
+  <p class="sub">Share this to launch the Fire Extinguisher AR Tutorial</p>
+
+  <div class="card">
+    <canvas id="qr-canvas"></canvas>
+
+    <div class="url-box" id="url-display">Enter your GitHub Pages URL below to generate the QR code.</div>
+
+    <hr class="divider" />
+
+    <label for="url-input">🔗 Your GitHub Pages URL</label>
+    <input type="text" id="url-input"
+      placeholder="https://YOUR-USERNAME.github.io/fire-extinguisher-ar/"
+      oninput="generateQR(this.value)" />
+
+    <button class="btn btn-red" onclick="downloadQR()">⬇️ Download QR Code</button>
+    <button class="btn btn-dark" onclick="window.print()">🖨️ Print QR Code</button>
+
+    <hr class="divider" />
+
+    <p class="hint">
+      <strong>How to get your URL:</strong><br>
+      After pushing to GitHub, go to<br>
+      <em>Settings → Pages → Your site is published at…</em><br>
+      Copy that URL and paste it above.
+    </p>
+  </div>
+
+  <script>
+    let qrReady = false;
+
+    function generateQR(url) {
+      if (!url || !url.startsWith('http')) return;
+      document.getElementById('url-display').textContent = url;
+
+      QRCode.toCanvas(
+        document.getElementById('qr-canvas'),
+        url,
+        {
+          width: 260,
+          margin: 2,
+          color: { dark: '#1a1a1a', light: '#ffffff' },
+          errorCorrectionLevel: 'H'
+        },
+        (err) => { if (!err) qrReady = true; }
+      );
+    }
+
+    function downloadQR() {
+      if (!qrReady) { alert('Please enter your GitHub Pages URL first!'); return; }
+      const canvas = document.getElementById('qr-canvas');
+      const link = document.createElement('a');
+      link.download = 'fire-extinguisher-ar-qr.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+    }
+
+    // Auto-fill if there's a URL param
+    const params = new URLSearchParams(window.location.search);
+    const preUrl = params.get('url');
+    if (preUrl) {
+      document.getElementById('url-input').value = preUrl;
+      generateQR(preUrl);
+    }
+  </script>
+</body>
+</html>
